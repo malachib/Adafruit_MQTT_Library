@@ -211,7 +211,7 @@ uint16_t Adafruit_MQTT::processPacketsUntil(uint8_t *buffer, uint8_t waitforpack
     // TODO: add subscription reading & processing here
 
     if ((buffer[0] >> 4) == waitforpackettype) {
-      //DEBUG_PRINTLN(F("Found right packet")); 
+      //DEBUG_PRINTLN(F("Found right packet"));
       return len;
     }
   }
@@ -252,7 +252,7 @@ uint16_t Adafruit_MQTT::readFullPacket(uint8_t *buffer, uint16_t timeout) {
   } while (encodedByte & 0x80);
 
   //DEBUG_PRINT(F("Packet Length:\t")); DEBUG_PRINTLN(value);
-  
+
   rlen = readPacket(pbuff, value, timeout);
   //DEBUG_PRINT(F("Remaining packet:\t")); DEBUG_PRINTBUFFER(pbuff, rlen);
 
@@ -452,7 +452,7 @@ Adafruit_MQTT_Subscribe *Adafruit_MQTT::readSubscription(int16_t timeout) {
 
   if ((MQTT_PROTOCOL_LEVEL > 3) &&(buffer[0] & 0x6) == 0x2) {
     uint8_t ackpacket[4];
-    
+
     // Construct and send puback packet.
     uint8_t len = pubackPacket(ackpacket, packetid);
     if (!sendPacket(ackpacket, len))
@@ -578,11 +578,9 @@ uint8_t Adafruit_MQTT::connectPacket(uint8_t *packet) {
 }
 
 
-// as per http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718040
-uint8_t Adafruit_MQTT::publishPacket(uint8_t *packet, const char *topic,
-                                     uint8_t *data, uint8_t bLen, uint8_t qos) {
+uint8_t* Adafruit_MQTT::setupPublishPacket(uint8_t *packet, const char *topic, uint8_t qos)
+{
   uint8_t *p = packet;
-  uint16_t len;
 
   p[0] = MQTT_CTRL_PUBLISH << 4 | qos << 1;
   // fill in packet[1] last
@@ -601,6 +599,15 @@ uint8_t Adafruit_MQTT::publishPacket(uint8_t *packet, const char *topic,
     packet_id_counter++;
   }
 
+  return p;
+}
+
+// as per http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718040
+uint8_t Adafruit_MQTT::publishPacket(uint8_t *packet, const char *topic,
+                                     uint8_t *data, uint8_t bLen, uint8_t qos) {
+  uint8_t *p = setupPublishPacket(packet, topic, qos);
+  uint16_t len;
+
   memmove(p, data, bLen);
   p+= bLen;
   len = p - packet;
@@ -610,6 +617,25 @@ uint8_t Adafruit_MQTT::publishPacket(uint8_t *packet, const char *topic,
   return len;
 
 }
+
+
+uint8_t Adafruit_MQTT::publishPacket(uint8_t *packet, const char *topic,
+                                     const __FlashStringHelper *data, uint8_t bLen, uint8_t qos) {
+  uint8_t *p = setupPublishPacket(packet, topic, qos);
+  uint16_t len;
+
+  // no data overlap will ever occur between p (DATA) and data (PROGMEM)
+  // so use memcpy
+  memcpy_P(p, data, bLen);
+  p+= bLen;
+  len = p - packet;
+  packet[1] = len-2; // don't include the 2 bytes of fixed header data
+  DEBUG_PRINTLN(F("MQTT publish packet (PSTR):"));
+  DEBUG_PRINTBUFFER(buffer, len);
+  return len;
+
+}
+
 
 uint8_t Adafruit_MQTT::subscribePacket(uint8_t *packet, const char *topic,
                                        uint8_t qos) {

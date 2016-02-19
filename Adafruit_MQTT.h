@@ -97,7 +97,7 @@
 
 //Function pointer called CallbackType that takes a float
 //and returns an int
-typedef void (*SubscribeCallbackType)(char *);  
+typedef void (*SubscribeCallbackType)(char *);
 
 extern void printBuffer(uint8_t *buffer, uint8_t len);
 
@@ -232,10 +232,13 @@ class Adafruit_MQTT {
   uint8_t connectPacket(uint8_t *packet);
   uint8_t disconnectPacket(uint8_t *packet);
   uint8_t publishPacket(uint8_t *packet, const char *topic, uint8_t *payload, uint8_t bLen, uint8_t qos);
+  uint8_t publishPacket(uint8_t *packet, const char *topic, const __FlashStringHelper *payload, uint8_t bLen, uint8_t qos);
   uint8_t subscribePacket(uint8_t *packet, const char *topic, uint8_t qos);
   uint8_t unsubscribePacket(uint8_t *packet, const char *topic);
   uint8_t pingPacket(uint8_t *packet);
   uint8_t pubackPacket(uint8_t *packet, uint16_t packetid);
+
+  uint8_t* setupPublishPacket(uint8_t* packet, const char* topic, uint8_t qos);
 };
 
 
