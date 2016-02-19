@@ -163,7 +163,32 @@ class Adafruit_MQTT {
   // The topic must be stored in PROGMEM. It can either be a
   // char*, or a __FlashStringHelper* (the result of the F() macro).
   bool publish(const char *topic, const char *payload, uint8_t qos = 0);
-  bool publish(const char *topic, uint8_t *payload, uint8_t bLen, uint8_t qos = 0);
+
+  // can't do direct drop-in template because it collides with above publish call
+  template <class T>
+  bool publishNew(const char *topic, T data, uint8_t bLen, uint8_t qos = 0) {
+    // Construct and send publish packet.
+    {
+      uint8_t len = publishPacket(buffer, topic, data, bLen, qos);
+      if (!sendPacket(buffer, len))
+        return false;
+    }
+
+    // If QOS level is high enough verify the response packet.
+    if (qos > 0) return verifyQOSResponse();
+
+    return true;
+  }
+
+  bool publish(const char *topic, uint8_t *payload, uint8_t bLen, uint8_t qos = 0) {
+    return publishNew(topic, payload, bLen, qos);
+  }
+
+  bool publish(const char *topic, const __FlashStringHelper *payload, uint8_t bLen, uint8_t qos = 0) {
+    return publishNew(topic, payload, bLen, qos);
+  }
+
+  //bool publish(const char *topic, uint8_t *payload, uint8_t bLen, uint8_t qos = 0);
   bool publish(const __FlashStringHelper *topic, const char *payload, uint8_t qos = 0) {
     return publish((const char *)topic, payload, qos);
   }
@@ -238,7 +263,10 @@ class Adafruit_MQTT {
   uint8_t pingPacket(uint8_t *packet);
   uint8_t pubackPacket(uint8_t *packet, uint16_t packetid);
 
+  // helper to setup headers for publish packet calls
   uint8_t* setupPublishPacket(uint8_t* packet, const char* topic, uint8_t qos);
+  // helper to verify QOS response when qos > 0
+  bool verifyQOSResponse();
 };
 
 
@@ -248,11 +276,13 @@ class Adafruit_MQTT_Publish {
   Adafruit_MQTT_Publish(Adafruit_MQTT *mqttserver, const __FlashStringHelper *feed, uint8_t qos = 0);
 
   bool publish(const char *s);
+  bool publish(const __FlashStringHelper *s);
   bool publish(double f, uint8_t precision=2);  // Precision controls the minimum number of digits after decimal.
                                                 // This might be ignored and a higher precision value sent.
   bool publish(int32_t i);
   bool publish(uint32_t i);
   bool publish(uint8_t *b, uint8_t bLen);
+
 
 
 private:
