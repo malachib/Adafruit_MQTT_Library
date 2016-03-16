@@ -97,7 +97,7 @@
 
 //Function pointer called CallbackType that takes a float
 //and returns an int
-typedef void (*SubscribeCallbackType)(char *);  
+typedef void (*SubscribeCallbackType)(char *);
 
 extern void printBuffer(uint8_t *buffer, uint8_t len);
 
@@ -185,6 +185,21 @@ class Adafruit_MQTT {
 
   // Ping the server to ensure the connection is still alive.
   bool ping(uint8_t n = 1);
+
+  // useful for ESP8266 etc which can use flash/SRAM pointers interchangeably
+  // for us to fiddle around with credentials at runtime.  Not so useful for AVR
+  // unless we want to switch between preset PGM space credentials
+  void setCredentials(PGM_P server, int16_t portnum, PGM_P clientid, PGM_P username, PGM_P password)
+  {
+    this->servername = server;
+    this->portnum = portnum;
+    this->clientid = clientid;
+    this->username = username;
+    this->password = password;
+  }
+
+  void setServerName(PGM_P server) { servername = server; }
+  void setPassword(PGM_P password) { this->password = password; }
 
  protected:
   // Interface that subclasses need to implement:
